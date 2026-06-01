@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Investment Broker</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial; background: #0a0a1a; color: white; padding: 20px; }
+        .container { max-width: 1400px; margin: auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; background: #1a1a2e; padding: 15px 25px; border-radius: 12px; margin-bottom: 25px; }
+        .logout-btn { background: #dc3545; padding: 8px 20px; border-radius: 8px; cursor: pointer; border: none; color: white; }
+        .card { background: #1a1a2e; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+        .admin-card { border: 2px solid #ff9800; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #333; }
+        th { color: #ff9800; }
+        input, select, textarea { padding: 8px; background: #0a0a1a; border: 1px solid #333; border-radius: 5px; color: white; width: 100%; margin-bottom: 10px; }
+        button { background: #ff9800; padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; margin: 5px; }
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+        .tab { background: #0f3460; padding: 10px 20px; border-radius: 8px; cursor: pointer; }
+        .tab.active { background: #ff9800; color: #1a1a2e; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .stock-card { background: #0f3460; padding: 15px; border-radius: 10px; display: inline-block; width: 230px; margin: 10px; }
+        .profit { color: #4caf50; }
+        .loss { color: #f44336; }
+        .pending { color: #ff9800; }
+        .approved { color: #4caf50; }
+        .rejected { color: #f44336; }
+        .settings-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 20px; }
+        .setting-card { background: #0f3460; padding: 20px; border-radius: 10px; }
+        .warning { color: #ff9800; font-size: 12px; margin-top: 5px; }
+        .success-msg { color: #4caf50; margin-top: 10px; }
+        .error-msg { color: #f44336; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container" id="app">Loading...</div>
+
+    <script>
+        const token = localStorage.getItem('token');
+        if (!token) window.location.href = '/login.html';
+
+        let users = [];
+        let stocks = [];
+        let withdrawals = [];
+        let paymentSettings = { crypto: {}, bank: {} };
+        let currentTab = 'users';
+        let adminProfile = { username: '', email: '' };
+
+        async function apiCall(endpoint, options = {}) {
+            const res = await fetch(endpoint, {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': token
+                },
+                ...options
+            });
+            return res.json();
+        }
+
+        async function loadData() {
+            try {
+                users = await apiCall('/api/admin/users');
+                stocks = await apiCall('/api/stocks');
+                withdrawals = await apiCall('/api/admin/withdrawals');
+                paymentSettings = await apiCall('/api/admin/payment-settings');
+                adminProfile = await apiCall('/api/admin/profile');
+                render();
+            } catch (err) {
+                console.log(err);
+            }
+        }
+
+        async function createUser() {
+            const username = document.getElementById('newUsername').value;
+            const password = document.getElementById('newPassword').value;
+            const email = document.getElementById('newEmail').value;
+            const balance = parseFloat(document.getElementById('newBalance').value) || 50000;
+            
+            if (!username || !password || !email) {
+                alert('Fill all fields');
+                return;
+            }
+            
+            const result = await apiCall('/api/admin/create-user', {
+                method: 'POST',
+                body: JSON.stringify({ username, password, email, initialBalance: balance })
+            });
+            
+            if (result.success) {
+                alert(`User ${username} created!`);
+                document.getElementById('newUsername').value = '';
+                document.getElementById('newPassword').value = '';
+                document.getElementById('newEmail').value = '';
+                loadData();
+            } else {
+                alert(result.error);
+            }
+        }
+
+        async function updateBalance(userId) {
+            const newBalance = parseFloat(document.getElementById(`bal_${userId}`).value);
+            if (isNaN(newBalance)) return;
+            await apiCall('/api/admin/update-balance', {
+                method: 'POST',
+                body: JSON.stringify({ userId, newBalance })
+            });
+            alert('Balance updated');
+            loadData();
+        }
+
+        async function addFunds(userId) {
+            const amount = parseFloat(document.getElementById(`add_${userId}`).value);
+            if (isNaN(amount)) return;
+            await apiCall('/api/admin/add-funds', {
+                method: 'POST',
+                body: JSON.stringify({ userId, amount })
+            });
+            alert(`Added $${amount}`);
+            loadData();
+        }
+
+        async function giveProfit() {
+            const percent = parseFloat(prompt('Enter profit percentage:', '10'));
+            if (isNaN(percent)) return;
+            await apiCall('/api/admin/give-profit', {
+                method: 'POST',
+                body: JSON.stringify({ percentage: percent })
+            });
+            alert(`Gave ${percent}% profit to all users`);
+            loadData();
+        }
+
+        async function updateStock(stockId) {
+            const newPrice = parseFloat(document.getElementById(`price_${stockId}`).value);
+            if (isNaN(newPrice)) return;
+            await apiCall('/api/admin/update-stock', {
+                method: 'POST',
+                body: JSON.stringify({ stockId, newPrice })
+            });
+            alert('Stock price updated');
+            loadData();
+        }
+
+        async function skyrocket(stockId) {
+            await apiCall('/api/admin/skyrocket', {
+                method: 'POST',
+                body: JSON.stringify({ stockId })
+            });
+            alert('🚀 Stock skyrocketed!');
+            loadData();
+        }
+
+        async function disableUser(userId, currentStatus) {
+            await apiCall('/api/admin/disable-user', {
+                method: 'POST',
+                body: JSON.stringify({ userId, isActive: !currentStatus })
+            });
+            alert('User status updated');
+            loadData();
+        }
+
+        async function changePassword(userId) {
+            const newPassword = prompt('Enter new password:');
+            if (!newPassword) return;
+            await apiCall('/api/admin/change-password', {
+                method: 'POST',
+                body: JSON.stringify({ userId, newPassword })
+            });
+            alert('Password changed');
+        }
+
+        async function approveWithdrawal(withdrawalId) {
+            if (!confirm('Approve this withdrawal? The user\'s balance will be deducted.')) return;
+            await apiCall('/api/admin/approve-withdrawal', {
+                method: 'POST',
+                body: JSON.stringify({ withdrawalId })
+            });
+            alert('Withdrawal approved');
+            loadData();
+        }
+
+        async function rejectWithdrawal(withdrawalId) {
+            const reason = prompt('Reason for rejection:');
+            await apiCall('/api/admin/reject-withdrawal', {
+                method: 'POST',
+                body: JSON.stringify({ withdrawalId, reason })
+            });
+            alert('Withdrawal rejected');
+            loadData();
+        }
+
+        async function updateCryptoWallets() {
+            const btc = document.getElementById('crypto_btc').value;
+            const usdt_trc20 = document.getElementById('crypto_usdt_trc20').value;
+            const usdt_erc20 = document.getElementById('crypto_usdt_erc20').value;
+            
+            await apiCall('/api/admin/update-crypto-wallets', {
+                method: 'POST',
+                body: JSON.stringify({ btc, usdt_trc20, usdt_erc20 })
+            });
+            alert('Crypto wallets updated');
+            loadData();
+        }
+
+        async function updateBankInfo() {
+            const bankName = document.getElementById('bank_name').value;
+            const accountName = document.getElementById('bank_account_name').value;
+            const accountNumber = document.getElementById('bank_account_number').value;
+            const routingNumber = document.getElementById('bank_routing').value;
+            const swiftCode = document.getElementById('bank_swift').value;
+            const wireInstructions = document.getElementById('bank_instructions').value;
+            
+            await apiCall('/api/admin/update-bank-info', {
+                method: 'POST',
+                body: JSON.stringify({ bankName, accountName, accountNumber, routingNumber, swiftCode, wireInstructions })
+            });
+            alert('Bank info updated');
+            loadData();
+        }
+
+        async function changeAdminUsername() {
+            const newUsername = document.getElementById('newAdminUsername').value;
+            if (!newUsername) {
+                alert('Enter new username');
+                return;
+            }
+            if (newUsername === adminProfile.username) {
+                alert('New username same as current');
+                return;
+            }
+            
+            const result = await apiCall('/api/admin/change-username', {
+                method: 'POST',
+                body: JSON.stringify({ newUsername })
+            });
+            
+            if (result.success) {
+                alert(`Username changed to ${result.newUsername}`);
+                adminProfile.username = result.newUsername;
+                document.getElementById('newAdminUsername').value = '';
+                
+                // Update stored user info
+                const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+                userInfo.username = result.newUsername;
+                localStorage.setItem('userInfo', JSON.stringify(userInfo));
+            } else {
+                alert(result.error);
+            }
+        }
+
+        async function changeAdminPassword() {
+            const currentPassword = document.getElementById('currentAdminPassword').value;
+            const newPassword = document.getElementById('newAdminPassword').value;
+            const confirmPassword = document.getElementById('confirmAdminPassword').value;
+            
+            if (!currentPassword || !newPassword || !confirmPassword) {
+                alert('Fill all password fields');
+                return;
+            }
+            
+            if (newPassword.length < 6) {
+                alert('New password must be at least 6 characters');
+                return;
+            }
+            
+            if (newPassword !== confirmPassword) {
+                alert('New passwords do not match');
+                return;
+            }
+            
+            const result = await apiCall('/api/admin/change-password-self', {
+                method: 'POST',
+                body: JSON.stringify({ currentPassword, newPassword })
+            });
+            
+            if (result.success) {
+                alert('Password changed successfully! You will be logged out.');
+                localStorage.removeItem('token');
+                window.location.href = '/login.html';
+            } else {
+                alert(result.error);
+            }
+        }
+
+        function setTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.getElementById(`${tab}Tab`).classList.add('active');
+            document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+
+        function render() {
+            let usersHtml = '';
+            for (let user of users) {
+                if (user.role !== 'admin') {
+                    usersHtml += `<tr>
+                        <td>${user.username}<br><span style="font-size:12px;">${user.email}</span></td>
+                        <td class="${user.isActive ? 'profit' : 'loss'}">${user.isActive ? 'Active' : 'Disabled'}</td>
+                        <td>$${user.balance.toLocaleString()}</td>
+                        <td>
+                            <input type="number" id="bal_${user._id}" placeholder="New balance" style="width:100px">
+                            <button onclick="updateBalance('${user._id}')">Set</button>
+                         </td>
+                        <td>
+                            <input type="number" id="add_${user._id}" placeholder="Amount" style="width:80px">
+                            <button onclick="addFunds('${user._id}')">Add</button>
+                         </td>
+                        <td>
+                            <button onclick="changePassword('${user._id}')">Change PW</button>
+                            <button onclick="disableUser('${user._id}', ${user.isActive})" class="${user.isActive ? 'loss' : 'profit'}">${user.isActive ? 'Disable' : 'Enable'}</button>
+                         </td>
+                    </tr>`;
+                }
+            }
+            
+            let withdrawalsHtml = '';
+            for (let w of withdrawals) {
+                withdrawalsHtml += `<tr>
+                    <td>${w.username || 'Unknown'}</td>
+                    <td>$${w.amount}</td>
+                    <td>${w.bankName}</td>
+                    <td>${w.accountNumber}</td>
+                    <td>${w.accountHolder}</td>
+                    <td>${w.ifscCode}</td>
+                    <td class="${w.status === 'pending' ? 'pending' : (w.status === 'approved' ? 'approved' : 'rejected')}">${w.status}</td>
+                    <td>
+                        ${w.status === 'pending' ? `
+                            <button onclick="approveWithdrawal(${w.id})" style="background:#28a745;">Approve</button>
+                            <button onclick="rejectWithdrawal(${w.id})" style="background:#dc3545;">Reject</button>
+                        ` : '-'}
+                     </td>
+                </tr>`;
+            }
+            
+            let stocksHtml = '';
+            for (let stock of stocks) {
+                stocksHtml += `
+                    <div class="stock-card">
+                        <h3>${stock.name}</h3>
+                        <p>Current: <strong>$${stock.price.toFixed(2)}</strong></p>
+                        <p>Change: <span class="${stock.change >= 0 ? 'profit' : 'loss'}">${stock.change >= 0 ? '+' : ''}${stock.change}%</span></p>
+                        <input type="number" id="price_${stock.id}" placeholder="New price">
+                        <button onclick="updateStock(${stock.id})" style="width:100%; margin-bottom:5px;">Set Price</button>
+                        <button onclick="skyrocket(${stock.id})" style="width:100%; background:#ff9800;">🚀 Skyrocket (+25%)</button>
+                    </div>
+                `;
+            }
+            
+            document.getElementById('app').innerHTML = `
+                <div class="header">
+                    <h1>👑 ADMIN CONTROL PANEL</h1>
+                    <div style="display: flex; gap: 15px; align-items: center;">
+                        <span style="color: #ff9800;">👤 ${adminProfile.username}</span>
+                        <button class="logout-btn" onclick="logout()">Logout</button>
+                    </div>
+                </div>
+                
+                <div class="tabs">
+                    <div class="tab active" onclick="setTab('users')">👥 Users</div>
+                    <div class="tab" onclick="setTab('withdrawals')">🏦 Withdrawals (${withdrawals.filter(w => w.status === 'pending').length})</div>
+                    <div class="tab" onclick="setTab('stocks')">📈 Stocks</div>
+                    <div class="tab" onclick="setTab('payments')">💳 Payment Settings</div>
+                    <div class="tab" onclick="setTab('profile')">⚙️ Profile Settings</div>
+                </div>
+                
+                <div id="usersTab" class="tab-content active">
+                    <div class="card admin-card">
+                        <h3>⚡ Quick Actions</h3>
+                        <button onclick="giveProfit()">🎁 Give % Profit to All Users</button>
+                    </div>
+                    <div class="card">
+                        <h3>➕ Create New User</h3>
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                            <input type="text" id="newUsername" placeholder="Username" style="width:150px">
+                            <input type="password" id="newPassword" placeholder="Password" style="width:150px">
+                            <input type="email" id="newEmail" placeholder="Email" style="width:200px">
+                            <input type="number" id="newBalance" placeholder="Initial Balance" value="50000" style="width:150px">
+                            <button onclick="createUser()">Create User</button>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3>👥 User Management</h3>
+                        <div style="overflow-x:auto;"><tr><thead><tr><th>User</th><th>Status</th><th>Balance</th><th>Set Balance</th><th>Add Funds</th><th>Actions</th></tr></thead><tbody>${usersHtml}</tbody></table></div>
+                    </div>
+                </div>
+                
+                <div id="withdrawalsTab" class="tab-content">
+                    <div class="card">
+                        <h3>🏦 Withdrawal Requests</h3>
+                        <div style="overflow-x:auto;"><table><thead><tr><th>User</th><th>Amount</th><th>Bank</th><th>Account</th><th>Holder</th><th>IFSC</th><th>Status</th><th>Action</th></tr></thead><tbody>${withdrawalsHtml || '<tr><td colspan="8">No withdrawal requests</td></tr>'}</tbody></table></div>
+                    </div>
+                </div>
+                
+                <div id="stocksTab" class="tab-content">
+                    <div class="card">
+                        <h3>📈 Stock Price Control</h3>
+                        <div id="stocksContainer" style="display:flex; flex-wrap:wrap;">${stocksHtml}</div>
+                    </div>
+                </div>
+                
+                <div id="paymentsTab" class="tab-content">
+                    <div class="settings-grid">
+                        <div class="setting-card">
+                            <h3>💎 CRYPTOCURRENCY WALLETS</h3>
+                            <label>BTC Address:</label>
+                            <input type="text" id="crypto_btc" value="${paymentSettings.crypto.btc || ''}" placeholder="BTC Address">
+                            <label>USDT (TRC20):</label>
+                            <input type="text" id="crypto_usdt_trc20" value="${paymentSettings.crypto.usdt_trc20 || ''}" placeholder="USDT TRC20 Address">
+                            <label>USDT (ERC20):</label>
+                            <input type="text" id="crypto_usdt_erc20" value="${paymentSettings.crypto.usdt_erc20 || ''}" placeholder="USDT ERC20 Address">
+                            <button onclick="updateCryptoWallets()">Save Crypto Wallets</button>
+                        </div>
+                        
+                        <div class="setting-card">
+                            <h3>🏦 BANK WIRE TRANSFER INFO</h3>
+                            <label>Bank Name:</label>
+                            <input type="text" id="bank_name" value="${paymentSettings.bank.bankName || ''}" placeholder="Bank Name">
+                            <label>Account Name:</label>
+                            <input type="text" id="bank_account_name" value="${paymentSettings.bank.accountName || ''}" placeholder="Account Name">
+                            <label>Account Number:</label>
+                            <input type="text" id="bank_account_number" value="${paymentSettings.bank.accountNumber || ''}" placeholder="Account Number">
+                            <label>Routing Number:</label>
+                            <input type="text" id="bank_routing" value="${paymentSettings.bank.routingNumber || ''}" placeholder="Routing Number">
+                            <label>SWIFT Code:</label>
+                            <input type="text" id="bank_swift" value="${paymentSettings.bank.swiftCode || ''}" placeholder="SWIFT Code">
+                            <label>Wire Instructions:</label>
+                            <textarea id="bank_instructions" rows="3" placeholder="Wire transfer instructions...">${paymentSettings.bank.wireInstructions || ''}</textarea>
+                            <button onclick="updateBankInfo()">Save Bank Info</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="profileTab" class="tab-content">
+                    <div class="settings-grid">
+                        <div class="setting-card">
+                            <h3>👤 Change Username</h3>
+                            <label>Current Username:</label>
+                            <input type="text" value="${adminProfile.username}" readonly disabled style="opacity:0.7;">
+                            <label>New Username:</label>
+                            <input type="text" id="newAdminUsername" placeholder="Enter new username">
+                            <div class="warning">⚠️ After changing username, you will need to login with the new username</div>
+                            <button onclick="changeAdminUsername()">Change Username</button>
+                        </div>
+                        
+                        <div class="setting-card">
+                            <h3>🔒 Change Password</h3>
+                            <label>Current Password:</label>
+                            <input type="password" id="currentAdminPassword" placeholder="Enter current password">
+                            <label>New Password:</label>
+                            <input type="password" id="newAdminPassword" placeholder="Enter new password (min 6 characters)">
+                            <label>Confirm New Password:</label>
+                            <input type="password" id="confirmAdminPassword" placeholder="Confirm new password">
+                            <div class="warning">⚠️ After changing password, you will be logged out and must login again</div>
+                            <button onclick="changeAdminPassword()">Change Password</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            window.location.href = '/login.html';
+        }
+
+        loadData();
+    </script>
+</body>
+</html>

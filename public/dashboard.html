@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Investment Broker</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial; background: #0a0a1a; color: white; padding: 20px; }
+        .container { max-width: 1200px; margin: auto; }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #1a1a2e;
+            padding: 15px 25px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+        }
+        .logout-btn { background: #dc3545; padding: 8px 20px; border-radius: 8px; cursor: pointer; border: none; color: white; }
+        .card { background: #1a1a2e; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 20px; }
+        .stat-card { background: linear-gradient(135deg, #1e3a5f, #0f3460); padding: 20px; border-radius: 12px; text-align: center; }
+        .stat-value { font-size: 32px; font-weight: bold; color: #ff9800; }
+        .stocks-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; margin-top: 15px; }
+        .stock-card { background: #0f3460; padding: 15px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .stock-price { font-size: 20px; font-weight: bold; color: #4caf50; }
+        .buy-btn { background: #ff9800; padding: 8px 20px; border-radius: 6px; cursor: pointer; border: none; font-weight: bold; }
+        .withdraw-btn { background: #28a745; padding: 8px 20px; border-radius: 6px; cursor: pointer; border: none; font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #333; }
+        th { color: #ff9800; }
+        .profit { color: #4caf50; }
+        .loss { color: #f44336; }
+        .pending { color: #ff9800; }
+        .approved { color: #4caf50; }
+        .rejected { color: #f44336; }
+        .modal {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 1000;
+        }
+        .modal-content { background: #1a1a2e; padding: 30px; border-radius: 15px; width: 500px; max-width: 90%; }
+        .modal-content input, .modal-content select, .modal-content textarea {
+            width: 100%; padding: 10px; margin: 10px 0; background: #0a0a1a; border: 1px solid #333; border-radius: 6px; color: white;
+        }
+        .modal-buttons { display: flex; gap: 10px; margin-top: 20px; }
+        .confirm-btn { background: #ff9800; border: none; padding: 10px; border-radius: 6px; cursor: pointer; flex: 1; }
+        .cancel-btn { background: #dc3545; border: none; padding: 10px; border-radius: 6px; cursor: pointer; color: white; flex: 1; }
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+        .tab { background: #0f3460; padding: 10px 20px; border-radius: 8px; cursor: pointer; }
+        .tab.active { background: #ff9800; color: #1a1a2e; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .payment-info { background: #0a0a1a; padding: 15px; border-radius: 8px; margin-top: 10px; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="container" id="app">Loading...</div>
+
+    <script>
+        const token = localStorage.getItem('token');
+        if (!token) window.location.href = '/login.html';
+
+        let currentUser = null;
+        let stocks = [];
+        let paymentMethods = { crypto: {}, bank: {} };
+        let currentTab = 'dashboard';
+        let withdrawals = [];
+
+        async function apiCall(endpoint, options = {}) {
+            const res = await fetch(endpoint, {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': token
+                },
+                ...options
+            });
+            return res.json();
+        }
+
+        async function loadData() {
+            try {
+                const user = await apiCall('/api/me');
+                if (user.error) {
+                    localStorage.removeItem('token');
+                    window.location.href = '/login.html';
+                    return;
+                }
+                currentUser = user;
+                stocks = await apiCall('/api/stocks');
+                paymentMethods = await apiCall('/api/payment-methods');
+                withdrawals = await apiCall('/api/my-withdrawals');
+                render();
+            } catch (err) {
+                console.log(err);
+            }
+        }
+
+        function showPaymentModal(stock, quantity) {
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <h3>Complete Purchase: ${stock.name}</h3>
+                    <p>Shares: ${quantity}</p>
+                    <p>Total Amount: $${(stock.price * quantity).toFixed(2)}</p>
+                    <hr style="margin: 15px 0;">
+                    <h4>Select Payment Method:</h4>
+                    <select id="paymentMethodSelect">
+                        <option value="">-- Select --</option>
+                        <option value="crypto">💎 Cryptocurrency (USDT/BTC)</option>
+                        <option value="bank">🏦 Wire Transfer</option>
+                    </select>
+                    <div id="paymentDetails" style="margin-top: 15px;"></div>
+                    <div class="modal-buttons">
+                        <button class="confirm-btn" onclick="confirmPurchaseWithPayment(${stock.id}, ${quantity})">Confirm Payment</button>
+                        <button class="cancel-btn" onclick="closeModal()">Cancel</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            
+            const select = document.getElementById('paymentMethodSelect');
+            select.addEventListener('change', function() {
+                const detailsDiv = document.getElementById('paymentDetails');
+                if (this.value === 'crypto') {
+                    detailsDiv.innerHTML = `
+                        <div class="payment-info">
+                            <strong>💎 CRYPTOCURRENCY PAYMENT</strong><br><br>
+                            <strong>BTC Address:</strong><br>${paymentMethods.crypto.btc || 'Not set'}<br><br>
+                            <strong>USDT (TRC20):</strong><br>${paymentMethods.crypto.usdt_trc20 || 'Not set'}<br><br>
+                            <strong>USDT (ERC20):</strong><br>${paymentMethods.crypto.usdt_erc20 || 'Not set'}<br><br>
+                            <span style="color: #ff9800;">⚠️ Send exact amount: $${(stock.price * quantity).toFixed(2)}</span><br>
+                            <span style="color: #ff9800;">⚠️ Include your username: ${currentUser.username}</span>
+                        </div>
+                    `;
+                } else if (this.value === 'bank') {
+                    detailsDiv.innerHTML = `
+                        <div class="payment-info">
+                            <strong>🏦 WIRE TRANSFER DETAILS</strong><br><br>
+                            <strong>Bank Name:</strong> ${paymentMethods.bank.bankName || 'Not set'}<br>
+                            <strong>Account Name:</strong> ${paymentMethods.bank.accountName || 'Not set'}<br>
+                            <strong>Account Number:</strong> ${paymentMethods.bank.accountNumber || 'Not set'}<br>
+                            <strong>Routing Number:</strong> ${paymentMethods.bank.routingNumber || 'Not set'}<br>
+                            <strong>SWIFT Code:</strong> ${paymentMethods.bank.swiftCode || 'Not set'}<br><br>
+                            <strong>Instructions:</strong><br>${paymentMethods.bank.wireInstructions || 'No instructions'}<br><br>
+                            <span style="color: #ff9800;">⚠️ Send exact amount: $${(stock.price * quantity).toFixed(2)}</span><br>
+                            <span style="color: #ff9800;">⚠️ Include your username: ${currentUser.username}</span>
+                        </div>
+                    `;
+                }
+            });
+        }
+
+        window.confirmPurchaseWithPayment = async function(stockId, quantity) {
+            const paymentMethod = document.getElementById('paymentMethodSelect').value;
+            if (!paymentMethod) {
+                alert('Please select a payment method');
+                return;
+            }
+            
+            const result = await apiCall('/api/buy', {
+                method: 'POST',
+                body: JSON.stringify({ stockId, quantity, paymentMethod })
+            });
+            
+            if (result.success) {
+                alert(`Purchase successful! ${quantity} shares added to your portfolio.`);
+                closeModal();
+                loadData();
+            } else {
+                alert(result.error);
+            }
+        };
+
+        async function buyStock(stock) {
+            const quantity = prompt(`How many shares of ${stock.name} to buy?`, '1');
+            if (!quantity || isNaN(quantity)) return;
+            showPaymentModal(stock, parseInt(quantity));
+        }
+
+        async function sellStock(stockId, stockName, quantity) {
+            if (!confirm(`Sell ${quantity} shares of ${stockName}?`)) return;
+            
+            const result = await apiCall('/api/sell', {
+                method: 'POST',
+                body: JSON.stringify({ stockId, quantity })
+            });
+            
+            if (result.success) {
+                alert(`Sold ${quantity} shares of ${stockName}`);
+                loadData();
+            } else {
+                alert(result.error);
+            }
+        }
+
+        function showWithdrawModal() {
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <h3>Request Withdrawal</h3>
+                    <input type="number" id="withdrawAmount" placeholder="Amount ($)" min="10">
+                    <input type="text" id="bankName" placeholder="Bank Name">
+                    <input type="text" id="accountNumber" placeholder="Account Number">
+                    <input type="text" id="accountHolder" placeholder="Account Holder Name">
+                    <input type="text" id="ifscCode" placeholder="IFSC / Routing Code">
+                    <div class="modal-buttons">
+                        <button class="confirm-btn" onclick="submitWithdrawal()">Submit Request</button>
+                        <button class="cancel-btn" onclick="closeModal()">Cancel</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        window.submitWithdrawal = async function() {
+            const amount = parseFloat(document.getElementById('withdrawAmount').value);
+            const bankName = document.getElementById('bankName').value;
+            const accountNumber = document.getElementById('accountNumber').value;
+            const accountHolder = document.getElementById('accountHolder').value;
+            const ifscCode = document.getElementById('ifscCode').value;
+            
+            if (!amount || amount < 10) {
+                alert('Minimum withdrawal amount is $10');
+                return;
+            }
+            if (amount > currentUser.balance) {
+                alert('Insufficient balance');
+                return;
+            }
+            if (!bankName || !accountNumber || !accountHolder || !ifscCode) {
+                alert('Please fill all bank details');
+                return;
+            }
+            
+            const result = await apiCall('/api/withdraw', {
+                method: 'POST',
+                body: JSON.stringify({ amount, bankName, accountNumber, accountHolder, ifscCode })
+            });
+            
+            if (result.success) {
+                alert('Withdrawal request submitted! Admin will review.');
+                closeModal();
+                loadData();
+            } else {
+                alert(result.error);
+            }
+        };
+
+        window.closeModal = function() {
+            const modal = document.querySelector('.modal');
+            if (modal) modal.remove();
+        };
+
+        function logout() {
+            localStorage.removeItem('token');
+            window.location.href = '/login.html';
+        }
+
+        function setTab(tab) {
+            currentTab = tab;
+            render();
+        }
+
+        function render() {
+            let portfolioValue = 0;
+            let holdingsHtml = '';
+            
+            for (let holding of (currentUser.holdings || [])) {
+                const stock = stocks.find(s => s.id === holding.stockId);
+                if (stock) {
+                    const currentValue = stock.price * holding.quantity;
+                    const invested = holding.avgPrice * holding.quantity;
+                    const profitLoss = currentValue - invested;
+                    portfolioValue += currentValue;
+                    
+                    holdingsHtml += `<tr>
+                        <td>${holding.stockName}</td>
+                        <td>${holding.quantity}</td>
+                        <td>$${holding.avgPrice.toFixed(2)}</td><td>$${stock.price.toFixed(2)}</td><td>$${currentValue.toFixed(2)}</td>
+                        <td class="${profitLoss >= 0 ? 'profit' : 'loss'}">${profitLoss >= 0 ? '+' : ''}$${profitLoss.toFixed(2)}</td>
+                        <td><button onclick="sellStock(${holding.stockId}, '${holding.stockName}', ${holding.quantity})" style="background:#dc3545; padding:5px 15px; border:none; border-radius:5px; cursor:pointer;">Sell</button></td>
+                    </tr>`;
+                }
+            }
+            
+            const netWorth = currentUser.balance + portfolioValue;
+            
+            let transactionsHtml = '';
+            for (let tx of (currentUser.transactions || []).slice(0, 20)) {
+                transactionsHtml += `<tr>
+                    <td>${tx.date}</td><td>${tx.type}</td><td>${tx.stock}</td>
+                    <td>${tx.shares || '-'}</td><td>$${tx.price?.toFixed(2) || '-'}</td>
+                    <td>$${tx.total?.toFixed(2) || '-'}</td>
+                    <td class="${tx.profitLoss && tx.profitLoss > 0 ? 'profit' : (tx.profitLoss && tx.profitLoss < 0 ? 'loss' : '')}">${tx.profitLoss ? (tx.profitLoss > 0 ? '+' : '') + tx.profitLoss.toFixed(2) : '-'}</td>
+                </tr>`;
+            }
+            
+            let withdrawalsHtml = '';
+            for (let w of withdrawals) {
+                withdrawalsHtml += `<tr>
+                    <td>$${w.amount}</td><td>${w.bankName}</td><td>${w.accountNumber}</td>
+                    <td class="${w.status === 'pending' ? 'pending' : (w.status === 'approved' ? 'approved' : 'rejected')}">${w.status.toUpperCase()}</td>
+                    <td>${w.date || '-'}</td>
+                </tr>`;
+            }
+            
+            let stocksHtml = '';
+            for (let stock of stocks) {
+                stocksHtml += `
+                    <div class="stock-card">
+                        <div><h3>${stock.name}</h3><p>Imaginary Stock</p></div>
+                        <div><div class="stock-price">$${stock.price.toFixed(2)}</div><div style="font-size:12px; color:#4caf50;">+${stock.change}%</div></div>
+                        <button class="buy-btn" onclick='buyStock({id:${stock.id}, name:"${stock.name}", price:${stock.price}})'>Buy</button>
+                    </div>
+                `;
+            }
+            
+            document.getElementById('app').innerHTML = `
+                <div class="header">
+                    <h1>📈 Welcome, ${currentUser.username}</h1>
+                    <button class="logout-btn" onclick="logout()">Logout</button>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-card"><div>💰 Balance</div><div class="stat-value">$${currentUser.balance.toLocaleString()}</div></div>
+                    <div class="stat-card"><div>📊 Portfolio</div><div class="stat-value">$${portfolioValue.toLocaleString()}</div></div>
+                    <div class="stat-card"><div>💎 Net Worth</div><div class="stat-value">$${netWorth.toLocaleString()}</div></div>
+                </div>
+                
+                <div class="tabs">
+                    <div class="tab ${currentTab === 'dashboard' ? 'active' : ''}" onclick="setTab('dashboard')">📈 Dashboard</div>
+                    <div class="tab ${currentTab === 'withdraw' ? 'active' : ''}" onclick="setTab('withdraw')">💸 Withdraw</div>
+                    <div class="tab ${currentTab === 'history' ? 'active' : ''}" onclick="setTab('history')">📜 History</div>
+                </div>
+                
+                <div id="dashboardTab" class="tab-content ${currentTab === 'dashboard' ? 'active' : ''}">
+                    <div class="card"><h2>📈 Available Stocks</h2><div class="stocks-grid">${stocksHtml}</div></div>
+                    ${holdingsHtml ? `<div class="card"><h2>📋 My Holdings</h2><table><thead><tr><th>Stock</th><th>Shares</th><th>Avg</th><th>Current</th><th>Value</th><th>P&L</th><th></th></tr></thead><tbody>${holdingsHtml}</tbody></table></div>` : ''}
+                </div>
+                
+                <div id="withdrawTab" class="tab-content ${currentTab === 'withdraw' ? 'active' : ''}">
+                    <div class="card">
+                        <h2>💸 Request Withdrawal</h2>
+                        <button class="withdraw-btn" onclick="showWithdrawModal()">Request Withdrawal</button>
+                    </div>
+                    <div class="card">
+                        <h2>📋 My Withdrawal Requests</h2>
+                        <table><thead><tr><th>Amount</th><th>Bank</th><th>Account</th><th>Status</th><th>Date</th></tr></thead><tbody>${withdrawalsHtml || '<tr><td colspan="5">No withdrawal requests</td></tr>'}</tbody></table>
+                    </div>
+                </div>
+                
+                <div id="historyTab" class="tab-content ${currentTab === 'history' ? 'active' : ''}">
+                    <div class="card">
+                        <h2>📜 Transaction History</h2>
+                        <div style="overflow-x:auto;"><td><thead><tr><th>Date</th><th>Type</th><th>Stock</th><th>Shares</th><th>Price</th><th>Total</th><th>P&L</th></tr></thead><tbody>${transactionsHtml || '<tr><td colspan="7">No transactions</td></tr>'}</tbody></table></div>
+                    </div>
+                </div>
+            `;
+        }
+
+        loadData();
+    </script>
+</body>
+</html>

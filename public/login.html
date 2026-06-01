@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Investment Broker</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #0a0a1a, #1a1a2e);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .login-box {
+            background: rgba(26, 26, 46, 0.95);
+            padding: 40px;
+            border-radius: 20px;
+            width: 350px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,152,0,0.3);
+        }
+        h1 { text-align: center; color: #ff9800; margin-bottom: 30px; }
+        input {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            background: #0a0a1a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            color: white;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #ff9800;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        .error { color: #ff4444; text-align: center; margin-top: 15px; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="login-box">
+        <h1>📈 INVESTMENT BROKER</h1>
+        <input type="text" id="username" placeholder="Username">
+        <input type="password" id="password" placeholder="Password">
+        <button onclick="login()">Login</button>
+        <div id="errorMsg" class="error"></div>
+    </div>
+
+    <script>
+        async function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const errorDiv = document.getElementById('errorMsg');
+
+            try {
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await res.json();
+                
+                if (!data.success) {
+                    errorDiv.textContent = data.error;
+                    return;
+                }
+                
+                localStorage.setItem('token', data.token);
+                
+                if (data.user.role === 'admin') {
+                    window.location.href = '/admin.html';
+                } else {
+                    window.location.href = '/dashboard.html';
+                }
+            } catch (err) {
+                errorDiv.textContent = 'Server error';
+            }
+        }
+
+        document.getElementById('password').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') login();
+        });
+    </script>
+</body>
+</html>

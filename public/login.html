@@ -2,56 +2,723 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Investment Broker</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Northfield Investment Services - Login</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: Arial, sans-serif;
-            background: linear-gradient(135deg, #0a0a1a, #1a1a2e);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            /* 60% Dominant - Soft Pearl White */
+            background: #f5f0e8;
             min-height: 100vh;
+            color: #1a2a1f;
+        }
+
+        /* Header Styles - 30% Secondary Dark Forest Green */
+        .header {
+            background: #1a3a2a;
+            padding: 20px 40px;
+            border-bottom: 3px solid #2ecc71;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-container {
+            max-width: 1400px;
+            margin: 0;
             display: flex;
-            justify-content: center;
             align-items: center;
+            gap: 25px;
+            flex-wrap: wrap;
         }
-        .login-box {
-            background: rgba(26, 26, 46, 0.95);
-            padding: 40px;
+
+        /* Logo */
+        .logo {
+            width: 65px;
+            height: 65px;
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(46,204,113,0.3);
+        }
+
+        .logo svg {
+            width: 40px;
+            height: 40px;
+        }
+
+        .logo-text {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .logo-text .northfield {
+            font-size: 32px;
+            font-weight: 800;
+            letter-spacing: 3px;
+            color: #2ecc71;
+            line-height: 1;
+        }
+
+        .logo-text .investment {
+            font-size: 12px;
+            font-weight: 500;
+            letter-spacing: 3px;
+            color: #e8f5e9;
+            text-transform: uppercase;
+            margin-top: 5px;
+        }
+
+        .tagline {
+            margin-left: 40px;
+            text-align: left;
+        }
+
+        .tagline p {
+            color: #c8e6d9;
+            font-size: 13px;
+            font-weight: 500;
+            margin: 3px 0;
+        }
+
+        .tagline p:first-child {
+            color: #2ecc71;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        /* Main Content Layout - Two Columns */
+        .main-content {
+            max-width: 1400px;
+            margin: 0;
+            padding: 50px 40px;
+            display: flex;
+            gap: 50px;
+            flex-wrap: wrap;
+        }
+
+        /* Left Column - Login Card (30% Secondary Dark Forest Green) */
+        .left-column {
+            flex: 1.2;
+            min-width: 320px;
+        }
+
+        .login-card {
+            background: #1a3a2a;
+            padding: 40px 35px;
             border-radius: 20px;
-            width: 350px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-            border: 1px solid rgba(255,152,0,0.3);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 100px;
+            border: 1px solid rgba(46,204,113,0.3);
+            max-width: 450px;
         }
-        h1 { text-align: center; color: #ff9800; margin-bottom: 30px; }
+
+        .login-card h2 {
+            color: #2ecc71;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .login-subtitle {
+            color: #a8d5ba;
+            font-size: 14px;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(46,204,113,0.3);
+        }
+
         input {
             width: 100%;
-            padding: 12px;
-            margin: 10px 0;
-            background: #0a0a1a;
-            border: 1px solid #333;
-            border-radius: 8px;
-            color: white;
+            padding: 14px;
+            margin: 12px 0;
+            background: #f5f0e8;
+            border: 1px solid rgba(46,204,113,0.3);
+            border-radius: 10px;
+            color: #1a3a2a;
+            font-size: 15px;
+            transition: all 0.3s;
         }
+
+        input:focus {
+            outline: none;
+            border-color: #2ecc71;
+            box-shadow: 0 0 0 3px rgba(46,204,113,0.1);
+        }
+
+        input::placeholder {
+            color: #8ba88a;
+        }
+
         button {
             width: 100%;
-            padding: 12px;
-            background: #ff9800;
+            padding: 14px;
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
             border: none;
-            border-radius: 8px;
+            border-radius: 10px;
+            color: #fff;
             font-weight: bold;
+            font-size: 16px;
             cursor: pointer;
             margin-top: 20px;
+            transition: all 0.3s;
         }
-        .error { color: #ff4444; text-align: center; margin-top: 15px; font-size: 14px; }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(46,204,113,0.4);
+        }
+
+        .error {
+            color: #e74c3c;
+            text-align: center;
+            margin-top: 15px;
+            font-size: 14px;
+        }
+
+        /* Right Column - Content */
+        .right-column {
+            flex: 2;
+            min-width: 380px;
+        }
+
+        /* Section Styles */
+        .section {
+            background: #ffffff;
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+            border-left: 4px solid #2ecc71;
+        }
+
+        .section h3 {
+            color: #1a3a2a;
+            font-size: 22px;
+            margin-bottom: 20px;
+            letter-spacing: 1px;
+        }
+
+        .section p {
+            color: #3a4a35;
+            line-height: 1.8;
+            font-size: 14px;
+            text-align: justify;
+        }
+
+        /* Feedback Section */
+        .feedback-section {
+            background: #ffffff;
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+        }
+
+        .feedback-section h3 {
+            color: #1a3a2a;
+            font-size: 22px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .feedback-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 25px;
+        }
+
+        .feedback-card {
+            background: #f9f6f0;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            transition: transform 0.3s, box-shadow 0.3s;
+            border: 1px solid #e8e0d4;
+        }
+
+        .feedback-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(46,204,113,0.15);
+            border-color: #2ecc71;
+        }
+
+        .feedback-avatar {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 15px;
+            font-size: 28px;
+            font-weight: bold;
+            color: #fff;
+        }
+
+        .feedback-name {
+            font-size: 18px;
+            font-weight: bold;
+            color: #1a3a2a;
+            margin-bottom: 5px;
+        }
+
+        .feedback-title {
+            font-size: 12px;
+            color: #7a9a75;
+            margin-bottom: 15px;
+        }
+
+        .feedback-text {
+            font-size: 13px;
+            color: #4a5a45;
+            line-height: 1.6;
+            font-style: italic;
+        }
+
+        .stars {
+            color: #f1c40f;
+            margin-top: 15px;
+            font-size: 14px;
+            letter-spacing: 2px;
+        }
+
+        /* Footer */
+        .footer {
+            background: #1a3a2a;
+            padding: 40px 40px 20px;
+            border-top: 3px solid #2ecc71;
+            margin-top: 40px;
+        }
+
+        .footer-container {
+            max-width: 1400px;
+            margin: 0;
+        }
+
+        .footer-top {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(46,204,113,0.2);
+            flex-wrap: wrap;
+        }
+
+        .footer-logo {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .footer-logo .small-logo {
+            width: 45px;
+            height: 45px;
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .footer-logo .footer-northfield {
+            font-size: 20px;
+            font-weight: 800;
+            color: #2ecc71;
+        }
+
+        .footer-logo .footer-investment {
+            font-size: 10px;
+            color: #a8d5ba;
+            letter-spacing: 2px;
+        }
+
+        .footer-text {
+            font-size: 11px;
+            color: #c8e6d9;
+            line-height: 1.6;
+            text-align: justify;
+        }
+
+        .footer-warning {
+            background: rgba(46, 204, 113, 0.08);
+            border-left: 3px solid #2ecc71;
+            padding: 15px;
+            margin: 20px 0;
+            font-size: 11px;
+            color: #2ecc71;
+        }
+
+        .footer-bottom {
+            margin-top: 20px;
+            padding-top: 15px;
+            text-align: center;
+            font-size: 10px;
+            color: #8ba88a;
+            border-top: 1px solid rgba(46,204,113,0.2);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .header-container {
+                justify-content: flex-start;
+            }
+            .tagline {
+                margin-left: 0;
+            }
+            .main-content {
+                padding: 40px 30px;
+                gap: 35px;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .header-container {
+                flex-direction: column;
+                text-align: center;
+                align-items: flex-start;
+            }
+            .tagline {
+                text-align: left;
+                margin-left: 0;
+            }
+            .main-content {
+                flex-direction: column;
+            }
+            .left-column {
+                position: static;
+            }
+            .login-card {
+                position: static;
+                max-width: 450px;
+                margin: 0;
+            }
+            .right-column {
+                min-width: auto;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                padding: 15px 20px;
+            }
+            .logo-text .northfield {
+                font-size: 24px;
+            }
+            .logo {
+                width: 50px;
+                height: 50px;
+            }
+            .logo svg {
+                width: 30px;
+                height: 30px;
+            }
+            .main-content {
+                padding: 30px 20px;
+            }
+            .login-card {
+                padding: 30px 25px;
+                max-width: 100%;
+            }
+            .section, .feedback-section {
+                padding: 25px 20px;
+            }
+            .section h3, .feedback-section h3 {
+                font-size: 20px;
+            }
+            .feedback-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            .footer {
+                padding: 30px 20px 15px;
+            }
+            .footer-top {
+                justify-content: flex-start;
+                text-align: left;
+            }
+            .footer-logo {
+                justify-content: flex-start;
+            }
+            .tagline {
+                margin-left: 0;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .tagline p {
+                font-size: 11px;
+            }
+            .login-card h2 {
+                font-size: 24px;
+            }
+            .section p {
+                font-size: 13px;
+            }
+            .feedback-card {
+                padding: 15px;
+            }
+        }
+
+        /* Tablet specific */
+        @media (min-width: 769px) and (max-width: 1024px) {
+            .feedback-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .main-content {
+                gap: 30px;
+            }
+        }
     </style>
 </head>
 <body>
-    <div class="login-box">
-        <h1>📈 INVESTMENT BROKER</h1>
-        <input type="text" id="username" placeholder="Username">
-        <input type="password" id="password" placeholder="Password">
-        <button onclick="login()">Login</button>
-        <div id="errorMsg" class="error"></div>
+    <!-- HEADER - 30% Secondary Dark Forest Green (Left Aligned) -->
+    <div class="header">
+        <div class="header-container">
+            <div class="logo">
+                <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="50" cy="50" r="45" stroke="#ffffff" stroke-width="2" fill="none"/>
+                    <path d="M30 50 L45 35 L55 45 L70 30" stroke="#2ecc71" stroke-width="3" fill="none" stroke-linecap="round"/>
+                    <path d="M30 50 L45 65 L55 55 L70 70" stroke="#27ae60" stroke-width="3" fill="none" stroke-linecap="round"/>
+                    <circle cx="50" cy="50" r="5" fill="#2ecc71"/>
+                </svg>
+            </div>
+            <div class="logo-text">
+                <div class="northfield">NORTH FIELD</div>
+                <div class="investment">INVESTMENT SERVICES</div>
+            </div>
+            <div class="tagline">
+                <p>✦ BEST STRATEGY ✦</p>
+                <p>Tax Advantages Planning</p>
+                <p>Long Term Wealth Accumulation</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN CONTENT - 60% Dominant Soft Pearl White Background -->
+    <div class="main-content">
+        <!-- LEFT COLUMN - LOGIN CARD (30% Secondary Dark Forest Green) Left Aligned -->
+        <div class="left-column">
+            <div class="login-card">
+                <h2>Client Portal</h2>
+                <div class="login-subtitle">Access Your Investment Account</div>
+                <input type="text" id="username" placeholder="Username" autocomplete="off">
+                <input type="password" id="password" placeholder="Password">
+                <button onclick="login()">Secure Login</button>
+                <div id="errorMsg" class="error"></div>
+            </div>
+        </div>
+
+        <!-- RIGHT COLUMN - CONTENT -->
+        <div class="right-column">
+            <!-- Investment Objective Section -->
+            <div class="section">
+                <h3>📊 Investment Objective</h3>
+                <p>North field investment service Hedged Equity Premium Income ETF is an actively-managed ETF that seeks to provide long-term capital growth, income and preservation of capital. The Fund will pursue its investment objective by investing primarily in U.S. large- and mid-cap equity and equity-related securities. The Fund will also employ a dynamic option overlay strategy by writing covered call options and buying protective put and put spreads options on up to 100% of the Fund's portfolio in order to generate income and mitigate (or hedge against) downside risk.</p>
+            </div>
+
+            <!-- Philosophy Section -->
+            <div class="section">
+                <h3>🎯 Investment Philosophy</h3>
+                <p><strong>Equity Selection:</strong> Guardian Capital LP, the Fund's sub-adviser (the "Sub-Adviser"), will employ a system driven bottom-up research approach to assess relative value and capital growth potential within a broad stock selection universe. The Fund maintains a mid- to large-capitalization bias and typically invests in a range of sectors and geographic regions. The Sub-Adviser seeks to isolate stock selection as the primary source of capital appreciation.</p>
+                <p style="margin-top: 15px;">The Sub-Adviser will use a quantitative approach, including the use of artificial intelligence ("AI") technology such as machine learning, deep learning and large language models, to analyze multiple fundamental and alternative factors and incorporate financial data and other information relevant to the issuer. Such factors considered by the Sub-Adviser include quantitative measures, such as AI driven predicted earnings growth, predicted dividend growth, predicted volatility, and valuation, as well as traditional factors such as historical earnings growth, momentum, relative price strength, value, size, quality, and potential for debt reduction.</p>
+                <p style="margin-top: 15px;">The Sub-Adviser will seek out companies that it believes have potential for capital growth. The Sub-Adviser may also seek a sustainable dividend yield, placing particular focus on dividend growth and dividend quality in making its assessments. The Sub-Adviser may also consider environmental, social and governance ("ESG") factors as part of the investment process.</p>
+                <p style="margin-top: 15px;"><strong>Options Overlay:</strong> To generate income in addition to the dividends received from the Fund's investment in equities and to mitigate (or hedge against) downside risk, the Sub-Adviser will employ a dynamic option overlay strategy including covered call options and protective put options.</p>
+                <p style="margin-top: 15px;">Under the covered call option strategy, the Sub-Adviser will generally write "out-of-the-money" call options on up to approximately 100% of the value of the Fund's portfolio. The Sub-Adviser may write covered call options on a lesser percentage of the portfolio, based on its discretion and market outlook. The amount of cash flow generated by the covered call option writing strategy will be dependent on market prices and the volatility of the underlying common stocks at the time of each sale. In addition, the Sub-Adviser will seek to mitigate (or hedge against) downside risk in the portfolio by employing a protective put option strategy for capital preservation. The Fund employs these strategies to reduce exposure to market declines and to generate additional income, while recognizing that the Fund may not fully benefit from strong equity market growth.</p>
+                <p style="margin-top: 15px;">In general, an option contract gives the purchaser of the option contract the right to purchase (for a call option) or sell (for a put option) the underlying asset at a specified price (the "strike price"), or for cash settled options, deliver cash equal to the difference in value of an underlying asset and the strike price. In exchange for selling the right to buy or sell the particular reference asset, the seller of an option contract receives income from the purchaser (i.e., a "premium").</p>
+            </div>
+
+            <!-- Client Feedback Section (10% Accent Emerald Green) -->
+            <div class="feedback-section">
+                <h3>⭐ What Our Clients Say</h3>
+                <div class="feedback-grid">
+                    <div class="feedback-card">
+                        <div class="feedback-avatar">JD</div>
+                        <div class="feedback-name">James Davidson</div>
+                        <div class="feedback-title">Retirement Investor</div>
+                        <div class="feedback-text">"North Field transformed my retirement planning. Their hedged equity strategy gave me consistent growth with peace of mind."</div>
+                        <div class="stars">★★★★★</div>
+                    </div>
+                    <div class="feedback-card">
+                        <div class="feedback-avatar">SW</div>
+                        <div class="feedback-name">Sarah Williams</div>
+                        <div class="feedback-title">Wealth Management Client</div>
+                        <div class="feedback-text">"The tax advantages planning has saved me thousands. Professional team, excellent results."</div>
+                        <div class="stars">★★★★★</div>
+                    </div>
+                    <div class="feedback-card">
+                        <div class="feedback-avatar">MC</div>
+                        <div class="feedback-name">Michael Chen</div>
+                        <div class="feedback-title">High Net Worth</div>
+                        <div class="feedback-text">"Best investment decision I've made. The AI-driven approach and option overlay strategy is truly innovative."</div>
+                        <div class="stars">★★★★★</div>
+                    </div>
+                    <div class="feedback-card">
+                        <div class="feedback-avatar">PR</div>
+                        <div class="feedback-name">Patricia Rodriguez</div>
+                        <div class="feedback-title">Long-term Client</div>
+                        <div class="feedback-text">"Five years with North Field and my portfolio has grown beyond expectations. Highly recommend!"</div>
+                        <div class="stars">★★★★★</div>
+                    </div>
+                    <div class="feedback-card">
+                        <div class="feedback-avatar">DT</div>
+                        <div class="feedback-name">David Thompson</div>
+                        <div class="feedback-title">Small Business Owner</div>
+                        <div class="feedback-text">"Finally found a firm that understands wealth accumulation. Their team is responsive and knowledgeable."</div>
+                        <div class="stars">★★★★★</div>
+                    </div>
+                    <div class="feedback-card">
+                        <div class="feedback-avatar">EL</div>
+                        <div class="feedback-name">Elizabeth Lee</div>
+                        <div class="feedback-title">ESG Investor</div>
+                        <div class="feedback-text">"Love their commitment to ESG factors while still delivering strong returns. A responsible choice."</div>
+                        <div class="stars">★★★★★</div>
+                    </div>
+                    <div class="feedback-card">
+                        <div class="feedback-avatar">RW</div>
+                        <div class="feedback-name">Robert White</div>
+                        <div class="feedback-title">Retired Executive</div>
+                        <div class="feedback-text">"Downside protection is real. During market volatility, my portfolio stayed steady. Thank you North Field."</div>
+                        <div class="stars">★★★★★</div>
+                    </div>
+                    <div class="feedback-card">
+                        <div class="feedback-avatar">KG</div>
+                        <div class="feedback-name">Karen Garcia</div>
+                        <div class="feedback-title">First-time Investor</div>
+                        <div class="feedback-text">"They made investing accessible and understandable. My confidence has grown along with my portfolio."</div>
+                        <div class="stars">★★★★★</div>
+                    </div>
+                    <div class="feedback-card">
+                        <div class="feedback-avatar">BN</div>
+                        <div class="feedback-name">Brian Nelson</div>
+                        <div class="feedback-title">Financial Advisor</div>
+                        <div class="feedback-text">"I recommend North Field to all my clients. Their approach to covered calls and put protection is best in class."</div>
+                        <div class="stars">★★★★★</div>
+                    </div>
+                    <div class="feedback-card">
+                        <div class="feedback-avatar">LM</div>
+                        <div class="feedback-name">Linda Martinez</div>
+                        <div class="feedback-title">Income Focused</div>
+                        <div class="feedback-text">"The premium income from their covered call strategy has been a game-changer for my monthly cash flow."</div>
+                        <div class="stars">★★★★★</div>
+                    </div>
+                    <div class="feedback-card">
+                        <div class="feedback-avatar">SF</div>
+                        <div class="feedback-name">Steven Foster</div>
+                        <div class="feedback-title">Institutional Investor</div>
+                        <div class="feedback-text">"Quantitative approach combined with AI delivers consistent alpha. Impressive risk-adjusted returns."</div>
+                        <div class="stars">★★★★★</div>
+                    </div>
+                    <div class="feedback-card">
+                        <div class="feedback-avatar">MW</div>
+                        <div class="feedback-name">Michelle Wong</div>
+                        <div class="feedback-title">Tech Executive</div>
+                        <div class="feedback-text">"Finally a firm that understands modern investing. Their use of machine learning and deep learning sets them apart."</div>
+                        <div class="stars">★★★★★</div>
+                    </div>
+                    <div class="feedback-card">
+                        <div class="feedback-avatar">JC</div>
+                        <div class="feedback-name">Jonathan Clark</div>
+                        <div class="feedback-title">Real Estate Investor</div>
+                        <div class="feedback-text">"Diversified my portfolio with North Field. Best move I made. Professional, transparent, results-driven."</div>
+                        <div class="stars">★★★★★</div>
+                    </div>
+                    <div class="feedback-card">
+                        <div class="feedback-avatar">AH</div>
+                        <div class="feedback-name">Amanda Harris</div>
+                        <div class="feedback-title">Young Professional</div>
+                        <div class="feedback-text">"Started with them 3 years ago. My wealth has grown significantly. Their long-term approach works."</div>
+                        <div class="stars">★★★★★</div>
+                    </div>
+                    <div class="feedback-card">
+                        <div class="feedback-avatar">PT</div>
+                        <div class="feedback-name">Paul Turner</div>
+                        <div class="feedback-title">Legacy Client</div>
+                        <div class="feedback-text">"Multi-generational wealth planning. North Field has been our trusted partner for over a decade."</div>
+                        <div class="stars">★★★★★</div>
+                    </div>
+                    <div class="feedback-card">
+                        <div class="feedback-avatar">RN</div>
+                        <div class="feedback-name">Rachel Nwosu</div>
+                        <div class="feedback-title">Global Investor</div>
+                        <div class="feedback-text">"International perspective with local expertise. My portfolio has never been stronger."</div>
+                        <div class="stars">★★★★★</div>
+                    </div>
+                    <div class="feedback-card">
+                        <div class="feedback-avatar">DM</div>
+                        <div class="feedback-name">Daniel Murphy</div>
+                        <div class="feedback-title">Risk Averse</div>
+                        <div class="feedback-text">"The protective put strategy gave me confidence to stay invested. North Field truly protects downside risk."</div>
+                        <div class="stars">★★★★★</div>
+                    </div>
+                    <div class="feedback-card">
+                        <div class="feedback-avatar">CO</div>
+                        <div class="feedback-name">Christina Okafor</div>
+                        <div class="feedback-title">Dividend Seeker</div>
+                        <div class="feedback-text">"Consistent dividend growth and premium income. Everything they promised and more."</div>
+                        <div class="stars">★★★★★</div>
+                    </div>
+                    <div class="feedback-card">
+                        <div class="feedback-avatar">TB</div>
+                        <div class="feedback-name">Thomas Brooks</div>
+                        <div class="feedback-title">Retired Military</div>
+                        <div class="feedback-text">"Financial freedom achieved. Their team guided me every step of the way. Grateful for their service."</div>
+                        <div class="stars">★★★★★</div>
+                    </div>
+                    <div class="feedback-card">
+                        <div class="feedback-avatar">SJ</div>
+                        <div class="feedback-name">Sophia Johnson</div>
+                        <div class="feedback-title">Philanthropist</div>
+                        <div class="feedback-text">"Managed my family foundation's endowment. Exceptional returns, even more exceptional people."</div>
+                        <div class="stars">★★★★★</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="footer">
+        <div class="footer-container">
+            <div class="footer-top">
+                <div class="footer-logo">
+                    <div class="small-logo">
+                        <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" width="25" height="25">
+                            <circle cx="50" cy="50" r="45" stroke="#ffffff" stroke-width="2" fill="none"/>
+                            <path d="M30 50 L45 35 L55 45 L70 30" stroke="#2ecc71" stroke-width="3" fill="none"/>
+                            <path d="M30 50 L45 65 L55 55 L70 70" stroke="#27ae60" stroke-width="3" fill="none"/>
+                            <circle cx="50" cy="50" r="5" fill="#2ecc71"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="footer-northfield">NORTH FIELD</div>
+                        <div class="footer-investment">INVESTMENT SERVICES</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="footer-text">
+                <p>Investment and insurance products and services are offered through Osaic Institutions, Inc., Member FINRA/SIPC. Northfield Investment Services is a trade name of Northfield Savings Bank. Osaic Institutions and Northfield Savings Bank are not affiliated. Products and services made available through Osaic Institutions are not insured by the FDIC or any other agency of the United States and are not deposits or obligations of nor guaranteed or insured by any bank or bank affiliate. These products are subject to investment risk, including the possible loss of value.</p>
+                
+                <div class="footer-warning">
+                    ⚠️ Investment Products are: NOT guaranteed by the bank | NOT FDIC insured | NOT a deposit | NOT insured by any federal government agency | MAY lose value including loss of principal
+                </div>
+            </div>
+            
+            <div class="footer-bottom">
+                &copy; 2024 Northfield Investment Services. All rights reserved.
+            </div>
+        </div>
     </div>
 
     <script>
@@ -59,6 +726,11 @@
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
             const errorDiv = document.getElementById('errorMsg');
+
+            if (!username || !password) {
+                errorDiv.textContent = 'Please enter username and password';
+                return;
+            }
 
             try {
                 const res = await fetch('/api/login', {
@@ -82,7 +754,7 @@
                     window.location.href = '/dashboard.html';
                 }
             } catch (err) {
-                errorDiv.textContent = 'Server error';
+                errorDiv.textContent = 'Server error. Please try again.';
             }
         }
 

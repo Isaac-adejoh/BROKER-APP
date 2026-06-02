@@ -25,6 +25,15 @@ const userSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now }
 });
 
+const userSessionSchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    ipAddress: { type: String, required: true },
+    deviceInfo: { type: String, default: 'Unknown Device' },
+    userAgent: { type: String },
+    loggedInAt: { type: Date, default: Date.now },
+    lastActive: { type: Date, default: Date.now }
+});
+
 const stockSchema = new mongoose.Schema({
     id: { type: Number, unique: true },
     name: String,
@@ -39,6 +48,7 @@ const settingSchema = new mongoose.Schema({
 });
 
 const User = mongoose.model('User', userSchema);
+const UserSession = mongoose.model('UserSession', userSessionSchema);
 const Stock = mongoose.model('Stock', stockSchema);
 const Setting = mongoose.model('Setting', settingSchema);
 
@@ -126,6 +136,26 @@ async function initData() {
 
 initData();
 
+// Helper function to get client IP
+function getClientIp(req) {
+    return req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+}
+
+// Helper function to get device info
+function getDeviceInfo(req) {
+    const userAgent = req.headers['user-agent'] || 'Unknown';
+    let deviceInfo = 'Unknown Device';
+    
+    if (userAgent.includes('iPhone')) deviceInfo = 'iPhone';
+    else if (userAgent.includes('iPad')) deviceInfo = 'iPad';
+    else if (userAgent.includes('Android')) deviceInfo = 'Android Phone';
+    else if (userAgent.includes('Windows')) deviceInfo = 'Windows PC';
+    else if (userAgent.includes('Mac')) deviceInfo = 'Mac Computer';
+    else if (userAgent.includes('Linux')) deviceInfo = 'Linux Computer';
+    
+    return deviceInfo;
+}
+
 // Auth middleware
 async function auth(req, res, next) {
     const token = req.headers.authorization;
@@ -147,9 +177,7 @@ async function auth(req, res, next) {
     }
 }
 
-// ============ API ROUTES ============
-
-// Login
+// ============ LOGIN ROUTE WITH DEVICE LIMIT ============
 app.post('/api/login', async (req, res) => {
     try {
         const { username, password } = req.body;
@@ -166,6 +194,42 @@ app.post('/api/login', async (req, res) => {
         const valid = await bcrypt.compare(password, user.password);
         if (!valid) {
             return res.status(400).json({ error: 'Invalid credentials' });
+        }
+        
+        // Check device limit for non-admin users
+        const ipAddress = getClientIp(req);
+        const deviceInfo = getDeviceInfo(req);
+        const userAgent = req.headers['user-agent'];
+        
+        if (user.role !== 'admin') {
+            // Get active sessions for this user
+            const activeSessions = await UserSession.find({ userId: user._id });
+            
+            // Check if this IP already has a session
+            const existingSession = activeSessions.find(s => s.ipAddress === ipAddress);
+            
+            if (!existingSession && activeSessions.length >= 2) {
+                return res.status(403).json({ 
+                    error: 'Maximum 2 devices allowed. Please logout from another device first.' 
+                });
+            }
+            
+            // Update or create session
+            if (existingSession) {
+                existingSession.lastActive = new Date();
+                existingSession.deviceInfo = deviceInfo;
+                existingSession.userAgent = userAgent;
+                await existingSession.save();
+            } else {
+                await UserSession.create({
+                    userId: user._id,
+                    ipAddress: ipAddress,
+                    deviceInfo: deviceInfo,
+                    userAgent: userAgent,
+                    loggedInAt: new Date(),
+                    lastActive: new Date()
+                });
+            }
         }
         
         const token = jwt.sign({ userId: user._id, role: user.role }, process.env.JWT_SECRET || 'mysecretkey');
@@ -185,6 +249,17 @@ app.post('/api/login', async (req, res) => {
     }
 });
 
+// Logout endpoint - remove session
+app.post('/api/logout', auth, async (req, res) => {
+    try {
+        const ipAddress = getClientIp(req);
+        await UserSession.findOneAndDelete({ userId: req.userId, ipAddress: ipAddress });
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Get current user
 app.get('/api/me', auth, async (req, res) => {
     const user = await User.findById(req.userId).select('-password');
@@ -197,7 +272,7 @@ app.get('/api/stocks', async (req, res) => {
     res.json(stocks);
 });
 
-// Get payment methods (crypto wallets + bank info)
+// Get payment methods
 app.get('/api/payment-methods', auth, async (req, res) => {
     const cryptoWallets = await Setting.findOne({ key: 'crypto_wallets' });
     const bankInfo = await Setting.findOne({ key: 'bank_info' });
@@ -355,6 +430,37 @@ app.get('/api/admin/users', auth, async (req, res) => {
     }
     const users = await User.find().select('-password');
     res.json(users);
+});
+
+// Get all user sessions (for admin)
+app.get('/api/admin/sessions', auth, async (req, res) => {
+    if (req.user.role !== 'admin') {
+        return res.status(403).json({ error: 'Admin only' });
+    }
+    const sessions = await UserSession.find().populate('userId', 'username email');
+    res.json(sessions);
+});
+
+// Remove specific device session (admin)
+app.delete('/api/admin/remove-session', auth, async (req, res) => {
+    if (req.user.role !== 'admin') {
+        return res.status(403).json({ error: 'Admin only' });
+    }
+    
+    const { sessionId } = req.body;
+    await UserSession.findByIdAndDelete(sessionId);
+    res.json({ success: true });
+});
+
+// Clear all sessions for a user (admin)
+app.delete('/api/admin/clear-user-sessions', auth, async (req, res) => {
+    if (req.user.role !== 'admin') {
+        return res.status(403).json({ error: 'Admin only' });
+    }
+    
+    const { userId } = req.body;
+    await UserSession.deleteMany({ userId });
+    res.json({ success: true });
 });
 
 // Create user
@@ -712,13 +818,8 @@ app.listen(PORT, () => {
 ║  👤 Admin:  admin / admin123                                 ║
 ║  👤 Demo:   demo / demo123                                   ║
 ║                                                              ║
-║  📌 FEATURES:                                                ║
-║  - Crypto & Bank payment options                             ║
-║  - Withdrawal requests with bank details                     ║
-║  - Admin can update crypto wallets anytime                   ║
-║  - Admin can update bank info anytime                        ║
-║  - Admin can approve/reject withdrawals                      ║
-║  - Admin can change own username/password                    ║
+║  🔐 NEW FEATURE: 2-Device Limit Per User                     ║
+║  📊 Sessions stored in MongoDB                               ║
 ╚══════════════════════════════════════════════════════════════╝
     `);
 });
